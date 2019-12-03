@@ -1,9 +1,12 @@
 # NOTE(jamesr) Providers MUST implement provision() and remove(). That is all.
-import os, time
+import os, time, base64
 
 from Crypto.PublicKey import RSA
+import paramiko
+from scp import SCPClient, SCPException
 import digitalocean
 
+peer_config_download = 'peer-tunnel-configs.zip'
 
 class DigitalOceanProvider:
     endpoint = 'https://api.digitalocean.com/v2/'
@@ -17,42 +20,41 @@ class DigitalOceanProvider:
             raise Exception("Must set DO_TOKEN env var to DigitalOcean API token! See https://cloud.digitalocean.com/account/api/tokens")
         self.deploy_name = deploy_name
         self.manager = digitalocean.Manager(token=v)
-        self.name = self.vpn_name_prefix + '-' + self.deploy_name
-        self.keyname = self.vpn_name_prefix + '-ssh-key'
-    def toke(self):
-        return os.getenv('DO_TOKEN')
-    def set_creds(self, token):
-        self.token = token
+        self.name = '-'.join([self.vpn_name_prefix, self.deploy_name])
+        self.keyname = '-'.join([self.vpn_name_prefix, self.deploy_name, 'ssh-key'])
     def gen_ssh_keys(self):
         if os.path.exists(self.privkey_fn) and os.path.exists(self.pubkey_fn):
             print('SSH keys already seem to exist. Skipping generation.')
+            with open(self.privkey_fn, 'r') as content_file:
+                self.privkey = content_file.read()
+            with open(self.pubkey_fn, 'r') as content_file:
+                self.pubkey = content_file.read()
             return
         key = RSA.generate(2048)
         with open(self.privkey_fn, 'wb') as content_file:
             os.chmod(self.privkey_fn, 0o600)
-            content_file.write(key.exportKey('PEM'))
+            k = key.exportKey('PEM')
+            content_file.write(k)
+            self.privkey = k.decode('utf-8')
         with open(self.pubkey_fn, 'wb') as content_file:
-            self.pubkey = key.publickey().exportKey('OpenSSH')
-            content_file.write(self.pubkey)
-            self.pubkey = self.pubkey.decode('utf-8')
-        self.add_ssh_key_to_digitalocean()
-    def add_ssh_key_to_digitalocean(self):
-        print('Adding public key to DigitalOcean')
-        print(self.pubkey)
-        #TODO check DO for existing key, and ... delete?
-        # for key in self.manager.get_all_sshkeys():
-        #     print(key.name)
-        #     print(key.name == self.keyname)
+            k = key.publickey().exportKey('OpenSSH')
+            content_file.write(k)
+            self.pubkey = k.decode('utf-8')
+        self.__add_ssh_key_to_digitalocean()
+    def __add_ssh_key_to_digitalocean(self):
+        print('Adding public key {} to DigitalOcean'.format(self.keyname))
+        # Check for existing key, and delete
+        for key in self.manager.get_all_sshkeys():
+            if key.name == self.keyname:
+                key.destroy()
         key = digitalocean.SSHKey(
             token=os.getenv('DO_TOKEN'),
             name=self.keyname,
             public_key=self.pubkey)
-        print(key.create())
-        print(key)
-        self.do_keyid = key.id
+        key.create()
     def provision(self):
         self.gen_ssh_keys()
-        self.remove() # if droplet exists, we delete, and make a new one... "rotation"
+        self.remove() # If droplet exists, we delete, and make a new one... "rotation"
         keys = self.manager.get_all_sshkeys()
         # create droplet
         droplet = digitalocean.Droplet(
@@ -60,10 +62,10 @@ class DigitalOceanProvider:
             name = self.name,
             region = 'sfo2', #TODO
             image = 'ubuntu-18-04-x64',
-            # size_slug = '1024mb',
-            size = 's-1vcpu-1gb',
+            size = 's-1vcpu-1gb', # TODO
             ssh_keys = keys,
             backups = False)
+        print('Creating droplet ...')
         droplet.create()
         print('Droplet: {}, id={}'.format(droplet.name, droplet.id))
         self.droplet_id = droplet.id
@@ -78,8 +80,50 @@ class DigitalOceanProvider:
             print('Waiting for server ... IP: {}'.format(droplet.ip_address))
             droplet = self.manager.get_droplet(self.droplet_id)
             time.sleep(5)
-        time.sleep(5)
         print('IP Address: {}'.format(droplet.ip_address))
+        self.ip_address = droplet.ip_address
+        self.__install_wireguard()
+    def __install_wireguard(self):
+        # NOTE there is no API specific way of telling if the SSH daemon is
+        # ready. We just have to try in a loop
+        time.sleep(10)
+        key = paramiko.RSAKey.from_private_key_file(self.privkey_fn)
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.get_host_keys().add(self.deploy_name, 'ssh-rsa', key)
+        for i in range(5):
+            print("Attempting to connect {}/{} ...".format(i, 5))
+            try:
+                client.connect(self.ip_address, username='root')
+            except paramiko.ssh_exception.NoValidConnectionsError:
+                print('No valid connection. (Server probably not ready.)')
+                time.sleep(5)
+                continue
+            scp = SCPClient(client.get_transport())
+            print('Installing server (running script remotely, takes a little time ...')
+            #TODO ensure pathing
+            scp.put('./aux/setup-ubuntu.sh', '/root/setup.sh')
+            stdin, stdout, stderr = client.exec_command('/root/setup.sh')
+            exit_status = stdout.channel.recv_exit_status() # Blocking call
+            if exit_status != 0:
+                print('Error occured. Cannot continue Exit status {}'.format(exit_status))
+                return
+            # Now, retrieve the generated peer configs
+            try:
+                os.remove(peer_config_download)
+            except FileNotFoundError:
+                pass
+            for j in range(10):
+                try:
+                    scp.get('/root/{}'.format(peer_config_download))
+                except SCPException:
+                    print("{} not avilable. Trying again.".format(peer_config_download))
+                    time.sleep(5)
+                    continue
+            else:
+                print('Peer configs available: {}'.format(peer_config_download))
+                break
+            break
     def remove(self):
         has_removed = False
         for droplet in self.manager.get_all_droplets():

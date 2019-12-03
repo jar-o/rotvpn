@@ -6,13 +6,6 @@ https://craighuther.com/2019/05/14/wireguard-setup-and-installation/
 https://www.ckn.io/blog/2017/11/14/wireguard-vpn-typical-setup/
 https://www.stavros.io/posts/how-to-configure-wireguard/
 https://emanuelduss.ch/2018/09/wireguard-vpn-road-warrior-setup/
-
-TODO SCP from Python (fetch client configs)
-https://pypi.org/project/scp/
-
-ssh -i rotvpn-digitalocean-private.key -o "StrictHostKeyChecking no" root@<IP ADDRESS>
-scp -i rotvpn-digitalocean-private.key root@<IP ADDRESS>:~/peer-tunnel-configs.zip peer-tunnel-configs.zip
-
 """
 
 import sys, argparse
@@ -36,6 +29,7 @@ if __name__ == "__main__":
         sys.exit(7)
 
     provider = get_provider(args.provider, args.name)
+
     if args.do == 'remove':
         provider.remove()
     else:
