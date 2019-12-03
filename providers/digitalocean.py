@@ -61,7 +61,7 @@ class DigitalOceanProvider:
         # create droplet
         size = 's-1vcpu-1gb'
         region = 'sfo2'
-        if self.config != None:
+        if hasattr(self, 'config') and self.config != None:
             if 'size' in self.config:
                 size = self.config['size']
             if 'region' in self.config:
