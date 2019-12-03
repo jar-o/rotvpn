@@ -39,7 +39,7 @@ for i in `seq 2 11`; do
         echo "[Interface]" >> $clifn
         echo "Address = 10.200.200.${i}/24" >> $clifn
         echo "PrivateKey = $(cat client-privatekey)" >> $clifn
-        echo "DNS = 10.200.200.1" >> $clifn      #opendns
+        echo "DNS = 10.200.200.1" >> $clifn
         echo "" >> $clifn
         echo "[Peer]" >> $clifn
         echo "PublicKey = $(cat publickey)" >> $clifn

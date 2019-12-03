@@ -45,7 +45,7 @@ class DigitalOceanProvider:
         self.__add_ssh_key_to_digitalocean()
     def __add_ssh_key_to_digitalocean(self):
         print('Adding public key {} to DigitalOcean'.format(self.keyname))
-        # Check for existing key, and delete
+        # check for existing key, and delete
         for key in self.manager.get_all_sshkeys():
             if key.name == self.keyname:
                 key.destroy()
@@ -56,7 +56,7 @@ class DigitalOceanProvider:
         key.create()
     def provision(self):
         self.gen_ssh_keys()
-        self.remove() # If droplet exists, we delete, and make a new one... "rotation"
+        self.remove() # if droplet exists, we delete, and make a new one... "rotation"
         keys = self.manager.get_all_sshkeys()
         # create droplet
         size = 's-1vcpu-1gb'
@@ -67,7 +67,7 @@ class DigitalOceanProvider:
             if 'region' in self.config:
                 region = self.config['region']
         droplet = digitalocean.Droplet(
-            token = os.getenv('DO_TOKEN'), # TODO ROT_DO_TOKEN
+            token = os.getenv('DO_TOKEN'),
             name = self.name,
             region = region,
             image = 'ubuntu-18-04-x64',
@@ -117,7 +117,7 @@ class DigitalOceanProvider:
             if exit_status != 0:
                 print('Error occured. Cannot continue Exit status {}'.format(exit_status))
                 return
-            # Now, retrieve the generated peer configs
+            # now, retrieve the generated peer configs
             try:
                 os.remove(peer_config_download)
             except FileNotFoundError:
