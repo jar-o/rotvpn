@@ -1,5 +1,8 @@
 # rotvpn
 
+
+![rotvpn](aux/rotvpn-laurareen.com.png)
+
 Run a personal VPN in the cloud. And _rotate_ it regularly.
 
 VPN servers are a great way to hide your activity from the prying eyes of ISPs
