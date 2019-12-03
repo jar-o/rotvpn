@@ -1,5 +1,5 @@
 # NOTE(jamesr) Providers MUST implement provision() and remove(). That is all.
-import os, time, base64
+import os, time, base64, json
 
 from Crypto.PublicKey import RSA
 import paramiko
@@ -14,7 +14,7 @@ class DigitalOceanProvider:
     privkey_fn = "rotvpn-{}-private.key".format(prefix)
     pubkey_fn = "rotvpn-{}-public.key".format(prefix)
     vpn_name_prefix = 'rotvpn'
-    def __init__(self, deploy_name):
+    def __init__(self, deploy_name, config=None):
         v = os.getenv('DO_TOKEN')
         if v == None:
             raise Exception("Must set DO_TOKEN env var to DigitalOcean API token! See https://cloud.digitalocean.com/account/api/tokens")
@@ -22,6 +22,8 @@ class DigitalOceanProvider:
         self.manager = digitalocean.Manager(token=v)
         self.name = '-'.join([self.vpn_name_prefix, self.deploy_name])
         self.keyname = '-'.join([self.vpn_name_prefix, self.deploy_name, 'ssh-key'])
+        if config != None:
+            self.config = json.loads(config)
     def gen_ssh_keys(self):
         if os.path.exists(self.privkey_fn) and os.path.exists(self.pubkey_fn):
             print('SSH keys already seem to exist. Skipping generation.')
@@ -57,12 +59,19 @@ class DigitalOceanProvider:
         self.remove() # If droplet exists, we delete, and make a new one... "rotation"
         keys = self.manager.get_all_sshkeys()
         # create droplet
+        size = 's-1vcpu-1gb'
+        region = 'sfo2'
+        if self.config != None:
+            if 'size' in self.config:
+                size = self.config['size']
+            if 'region' in self.config:
+                region = self.config['region']
         droplet = digitalocean.Droplet(
             token = os.getenv('DO_TOKEN'), # TODO ROT_DO_TOKEN
             name = self.name,
-            region = 'sfo2', #TODO
+            region = region,
             image = 'ubuntu-18-04-x64',
-            size = 's-1vcpu-1gb', # TODO
+            size = size,
             ssh_keys = keys,
             backups = False)
         print('Creating droplet ...')

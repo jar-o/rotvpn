@@ -51,6 +51,7 @@ Here is the usage for the script:
 > python3 rotvpn.py --help
 
 usage: rotvpn.py [-h] [--provider [PROVIDER]] [--name NAME] [--do [DO]]
+                 [--config CONFIG]
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -60,6 +61,8 @@ optional arguments:
                         have multiple deploys for a provider.
   --do [DO]             Provision or remove your VPN: --do provision | --do
                         remove
+  --config CONFIG       Optional JSON config for your provider
+
 ```
 
 The `--name` parameter is the only one that is required. **rotvpn** defaults to
@@ -68,7 +71,17 @@ time you run the prior command, any existing server matching `--name` will be
 deleted, and a new server deployed with a new set of client configs
 (`peer-tunnel-configs.zip`)
 
-If you're done with the VPN for a while, you can simply remove it, and save some money until you need it again:
+Providers may have additional configuration fields they accept. If they do, you
+can use the `--config` parameter to pass in that information. For instance, the
+DigitalOcean provider defaults to the `sfo2` region, and the `s-1vcpu-2gb`
+(smallest) sized droplet. If you want to change that, you can do something like:
+
+```
+python3 rotvpn.py --name my-cool-vpn --config '{"region":"nyc3","size":"s-1vcpu-2gb"}'
+```
+
+If you're done with the VPN for a while, you can simply remove it, and save
+some money until you need it again:
 
 ```
 python3 rotvpn.py --name my-cool-vpn --do remove
