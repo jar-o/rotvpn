@@ -50,18 +50,17 @@ Here is the usage for the script:
 ```
 > python3 rotvpn.py --help
 
-usage: rotvpn.py [-h] [--provider [PROVIDER]] [--name NAME] [--do [DO]]
+usage: rotvpn.py [-h] [--provider PROVIDER] [--name NAME] [--do DO]
                  [--config CONFIG]
 
 optional arguments:
-  -h, --help            show this help message and exit
-  --provider [PROVIDER]
-                        Specify the provider, i.e. digitalocean
-  --name NAME           A name for your deploy, like 'mycoolvpn'. Lets you
-                        have multiple deploys for a provider.
-  --do [DO]             Provision or remove your VPN: --do provision | --do
-                        remove
-  --config CONFIG       Optional JSON config for your provider
+  -h, --help           show this help message and exit
+  --provider PROVIDER  Specify the provider, i.e. digitalocean
+  --name NAME          A name for your deploy, like 'mycoolvpn'. Lets you have
+                       multiple deploys for a provider.
+  --do DO              Provision or remove your VPN: --do provision | --do
+                       remove
+  --config CONFIG      Optional JSON config for your provider
 
 ```
 
