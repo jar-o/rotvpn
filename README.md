@@ -62,7 +62,7 @@ optional arguments:
                         remove
 ```
 
-The `--name` parameter is the only one that is required. It defaults to
+The `--name` parameter is the only one that is required. **rotvpn** defaults to
 DigitalOcean for `--provider` and the default `--do` action is `provision`. Any
 time you run the prior command, any existing server matching `--name` will be
 deleted, and a new server deployed with a new set of client configs
