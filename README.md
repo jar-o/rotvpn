@@ -9,8 +9,8 @@ up a VPN is difficult. Add to that, it's probably wise to change the IP address
 of your VPN after a while. Usually, this means tearing the existing server down
 and standing up a new one in its place.
 
-**rotvpn** is a pure Python utility that sets up a full tunnel
-[WireGuard](https://github.com/WireGuard/WireGuard) VPN with DNS (via
+**rotvpn** is a pure Python utility that sets up a
+[WireGuard](https://github.com/WireGuard/WireGuard) full tunnel VPN with DNS (via
 [unbound](https://github.com/NLnetLabs/unbound)). It is designed to be
 ephemeral, so you can rotate to a new server with a single command.
 
