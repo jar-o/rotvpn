@@ -1,6 +1,3 @@
-# rotvpn
-
-
 ![rotvpn](aux/rotvpn-laurareen.com.png)
 
 Run a personal VPN in the cloud. And _rotate_ it regularly.
