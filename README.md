@@ -20,7 +20,7 @@ they have a great API -- but other providers may be added in the future._
 # Installation
 
 You must have `python3` in your path. You will need to create a virtual
-environment and install the dependencies:
+environment and install the dependencies on your workstation:
 
 ```
 python3 -m virtualenv --python="$(command -v python3)" .env        # create the virtualenv
