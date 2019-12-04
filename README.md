@@ -19,8 +19,10 @@ they have a great API -- but other providers may be added in the future._
 
 # Installation
 
+**rotvpn** installs and runs from your workstation.
+
 You must have `python3` in your path. You will need to create a virtual
-environment and install the dependencies on your workstation:
+environment and install the dependencies:
 
 ```
 python3 -m virtualenv --python="$(command -v python3)" .env        # create the virtualenv
