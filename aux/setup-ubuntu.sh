@@ -24,7 +24,8 @@ PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING 
 SaveConfig = true' >> $fn
 
 rm -f peer-tunnel-configs.zip
-for i in `seq 1 10`; do
+for i in `seq 2 11`; do
+        j=$(expr $i - 1)"
         prefix="peer${i}"
         umask 077 && wg genpsk > client-preshared
         umask 077 && wg genkey | tee client-privatekey | wg pubkey > client-pubkey
