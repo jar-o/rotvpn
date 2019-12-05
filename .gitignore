@@ -2,5 +2,6 @@
 peer-tunnel-configs.zip
 peer-tunnel-configs/
 .venv3
+.env
 .DS_Store
 __pycache__

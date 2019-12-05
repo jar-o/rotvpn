@@ -25,8 +25,9 @@ You must have `python3` in your path. You will need to create a virtual
 environment and install the dependencies:
 
 ```
-python3 -m virtualenv --python="$(command -v python3)" .env        # create the virtualenv
+python3 -m venv .env                                               # create the virtualenv
 source .env/bin/activate                                           # start it up
+python3 -m pip install --upgrade pip                               # upgrade installer
 python3 -m pip install -r requirements.txt                         # install requirements
 ```
 
