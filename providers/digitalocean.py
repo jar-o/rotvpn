@@ -103,7 +103,8 @@ class DigitalOceanProvider:
         for i in range(5):
             print("Attempting to connect {}/{} ...".format(i, 5))
             try:
-                client.connect(self.ip_address, username='root')
+                client.connect(self.ip_address,
+                               username='root', key_filename=os.path.abspath(self.privkey_fn))
             except paramiko.ssh_exception.NoValidConnectionsError:
                 print('No valid connection. (Server probably not ready.)')
                 time.sleep(5)
