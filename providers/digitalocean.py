@@ -96,10 +96,8 @@ class DigitalOceanProvider:
         # NOTE there is no API specific way of telling if the SSH daemon is
         # ready. We just have to try in a loop
         time.sleep(10)
-        key = paramiko.RSAKey.from_private_key_file(self.privkey_fn)
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.get_host_keys().add(self.deploy_name, 'ssh-rsa', key)
         for i in range(5):
             print("Attempting to connect {}/{} ...".format(i, 5))
             try:
