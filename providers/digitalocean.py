@@ -108,7 +108,7 @@ class DigitalOceanProvider:
                 time.sleep(5)
                 continue
             scp = SCPClient(client.get_transport())
-            print('Installing server (running script remotely, takes a little time ...')
+            print('Installing server (running script remotely), takes a little time ...')
             #TODO ensure pathing
             scp.put('./aux/setup-ubuntu.sh', '/root/setup.sh')
             stdin, stdout, stderr = client.exec_command('/root/setup.sh')

@@ -14,10 +14,11 @@ apt install unbound unbound-host -y
 umask 077 && wg genkey | tee privatekey | wg pubkey > publickey
 
 srvaddr=$(hostname -I | awk '{print $1}')
+ipv6_prefix='fd86:ea04:1111'
 fn='/etc/wireguard/wg0.conf'
 echo '[Interface]' > $fn
 echo "PrivateKey = $(cat privatekey)" >> $fn
-echo "Address = 10.200.200.1/24" >> $fn
+echo "Address = 10.200.200.1/24, ${ipv6_prefix}::1/64" >> $fn
 echo 'ListenPort = 51820' >> $fn
 echo 'PostUp = iptables -A FORWARD -i wg0 -j ACCEPT; iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE; ip6tables -A FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
 PostDown = iptables -D FORWARD -i wg0 -j ACCEPT; iptables -t nat -D POSTROUTING -o eth0 -j MASQUERADE; ip6tables -D FORWARD -i wg0 -j ACCEPT; ip6tables -t nat -D POSTROUTING -o eth0 -j MASQUERADE
@@ -34,11 +35,11 @@ for i in `seq 2 11`; do
         echo '[Peer]' >> $fn
         echo "PublicKey = $(cat client-pubkey)" >> $fn
         echo "PresharedKey = $(cat client-preshared)" >> $fn
-        echo "AllowedIPs = 10.200.200.${i}/32" >> $fn
+        echo "AllowedIPs = 10.200.200.${i}/32, ${ipv6_prefix}::${i}/128" >> $fn
         # create the client tunnel file
         clifn="$prefix-tunnel.conf"
         echo "[Interface]" >> $clifn
-        echo "Address = 10.200.200.${i}/24" >> $clifn
+        echo "Address = 10.200.200.${i}/24, ${ipv6_prefix}::${i}/64" >> $clifn
         echo "PrivateKey = $(cat client-privatekey)" >> $clifn
         echo "DNS = 10.200.200.1" >> $clifn
         echo "" >> $clifn
@@ -126,6 +127,7 @@ systemctl restart unbound
 #### Firewall, etc
 
 sysctl -w net.ipv4.ip_forward=1
+sysctl -w net.ipv6.conf.all.forwarding=1
 
 iptables -A INPUT -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 iptables -A FORWARD -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
