@@ -50,7 +50,7 @@ You need an account ID, secret, and region, and you will need to export them int
 
 ```
 export ROT_AWS_ID=AKI...
-export ROT_AWS_SECRET=WM02nwmG5hDZMgi6WBwCLRQ9CPMV+W/fmc8k7WIf
+export ROT_AWS_SECRET=WM0...
 export ROT_AWS_REGION=us-west-2
 ```
 
