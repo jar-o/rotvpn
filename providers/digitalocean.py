@@ -1,12 +1,9 @@
-# NOTE(jamesr) Providers MUST implement provision() and remove(). That is all.
+# NOTE Providers MUST implement provision() and remove(). That is all.
 import os, time, base64, json
+from providers.common import install_wireguard
 
 from Crypto.PublicKey import RSA
-import paramiko
-from scp import SCPClient, SCPException
 import digitalocean
-
-peer_config_download = 'peer-tunnel-configs.zip'
 
 class DigitalOceanProvider:
     endpoint = 'https://api.digitalocean.com/v2/'
@@ -15,9 +12,9 @@ class DigitalOceanProvider:
     pubkey_fn = "rotvpn-{}-public.key".format(prefix)
     vpn_name_prefix = 'rotvpn'
     def __init__(self, deploy_name, config=None):
-        v = os.getenv('DO_TOKEN')
+        v = os.getenv('ROT_DO_TOKEN')
         if v == None:
-            raise Exception("Must set DO_TOKEN env var to DigitalOcean API token! See https://cloud.digitalocean.com/account/api/tokens")
+            raise Exception("Must set ROT_DO_TOKEN env var to DigitalOcean API token! See https://cloud.digitalocean.com/account/api/tokens")
         self.deploy_name = deploy_name
         self.manager = digitalocean.Manager(token=v)
         self.name = '-'.join([self.vpn_name_prefix, self.deploy_name])
@@ -50,7 +47,7 @@ class DigitalOceanProvider:
             if key.name == self.keyname:
                 key.destroy()
         key = digitalocean.SSHKey(
-            token=os.getenv('DO_TOKEN'),
+            token=os.getenv('ROT_DO_TOKEN'),
             name=self.keyname,
             public_key=self.pubkey)
         key.create()
@@ -67,7 +64,7 @@ class DigitalOceanProvider:
             if 'region' in self.config:
                 region = self.config['region']
         droplet = digitalocean.Droplet(
-            token = os.getenv('DO_TOKEN'),
+            token = os.getenv('ROT_DO_TOKEN'),
             name = self.name,
             region = region,
             image = 'ubuntu-18-04-x64',
@@ -91,47 +88,14 @@ class DigitalOceanProvider:
             time.sleep(5)
         print('IP Address: {}'.format(droplet.ip_address))
         self.ip_address = droplet.ip_address
-        self.__install_wireguard()
-    def __install_wireguard(self):
         # NOTE there is no API specific way of telling if the SSH daemon is
         # ready. We just have to try in a loop
         time.sleep(10)
-        client = paramiko.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        for i in range(5):
-            print("Attempting to connect {}/{} ...".format(i, 5))
-            try:
-                client.connect(self.ip_address,
-                               username='root', key_filename=os.path.abspath(self.privkey_fn))
-            except paramiko.ssh_exception.NoValidConnectionsError:
-                print('No valid connection. (Server probably not ready.)')
-                time.sleep(5)
-                continue
-            scp = SCPClient(client.get_transport())
-            print('Installing server (running script remotely), takes a little time ...')
-            #TODO ensure pathing
-            scp.put('./aux/setup-ubuntu.sh', '/root/setup.sh')
-            stdin, stdout, stderr = client.exec_command('/root/setup.sh')
-            exit_status = stdout.channel.recv_exit_status() # Blocking call
-            if exit_status != 0:
-                print('Error occured. Cannot continue Exit status {}'.format(exit_status))
-                return
-            # now, retrieve the generated peer configs
-            try:
-                os.remove(peer_config_download)
-            except FileNotFoundError:
-                pass
-            for j in range(10):
-                try:
-                    scp.get('/root/{}'.format(peer_config_download))
-                except SCPException:
-                    print("{} not avilable. Trying again.".format(peer_config_download))
-                    time.sleep(5)
-                    continue
-            else:
-                print('Peer configs available: {}'.format(peer_config_download))
-                break
-            break
+        install_wireguard(
+            self.ip_address,
+            self.privkey_fn,
+            'peer-tunnel-configs-digitalocean-{}.zip'.format(self.deploy_name)
+        )
     def remove(self):
         has_removed = False
         for droplet in self.manager.get_all_droplets():

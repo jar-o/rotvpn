@@ -1,10 +1,12 @@
 import sys, argparse
-from providers import digitalocean
+from providers import digitalocean, aws
 
 
 def get_provider(provider, deploy_name, config):
     if provider.lower() == "digitalocean":
         return digitalocean.DigitalOceanProvider(deploy_name, config)
+    elif provider.lower() == "aws":
+        return aws.AWSProvider(deploy_name, config)
     raise Exception('Could not match provider {}'.format(provider))
 
 

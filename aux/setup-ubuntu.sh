@@ -13,7 +13,7 @@ apt install unbound unbound-host -y
 
 umask 077 && wg genkey | tee privatekey | wg pubkey > publickey
 
-srvaddr=$(hostname -I | awk '{print $1}')
+publicaddr=$(dig +short myip.opendns.com @resolver1.opendns.com)
 ipv6_prefix='fd86:ea04:1111'
 fn='/etc/wireguard/wg0.conf'
 echo '[Interface]' > $fn
@@ -47,7 +47,7 @@ for i in `seq 2 11`; do
         echo "PublicKey = $(cat publickey)" >> $clifn
         echo "PresharedKey = $(cat client-preshared)" >> $clifn
         echo "AllowedIPs = 0.0.0.0/0,::/0" >> $clifn
-        echo "Endpoint = $srvaddr:51820" >> $clifn
+        echo "Endpoint = $publicaddr:51820" >> $clifn
         rm client-preshared
         rm client-privatekey
         rm client-pubkey

@@ -14,8 +14,7 @@ and standing up a new one in its place.
 [unbound](https://github.com/NLnetLabs/unbound)). It is designed to be
 ephemeral, so you can rotate to a new server with a single command.
 
-_Currently, only [DigitalOcean](https://digitalocean.com) is supported since
-they have a great API -- but other providers may be added in the future._
+_Currently, only [DigitalOcean](https://digitalocean.com) and [AWS](https://aws.amazon.com/) are supported. Other providers may be added in the future... Got a favorite? Feel free to send a patch!_
 
 # Installation
 
@@ -31,21 +30,41 @@ python3 -m pip install --upgrade pip                               # upgrade ins
 python3 -m pip install -r requirements.txt                         # install requirements
 ```
 
-Once that's done, you'll need to get a [DigitalOcean API token](https://cloud.digitalocean.com/account/api/tokens). Export it into your environment:
+# Running
+
+After you've installed the Python3 dependencies, you're ready to run your own VPN. Almost. Depending on which provider you use (Digitalocean is the default), you will need to export some variables into the environment.
+
+### Digitalocean
+
+You'll need to get a [DigitalOcean API token](https://cloud.digitalocean.com/account/api/tokens). Export it into your environment:
 
 ```
-export DO_TOKEN=123abc...
+export ROT_DO_TOKEN=123abc...
 ```
 
-and you're ready to go. Make sure you're running in your virtualenv, and in the
-root of this repo. Then do something like
+And you're ready to go.
+
+### AWS (Amazon Web Services)
+
+You need an account ID, secret, and region, and you will need to export them into your environment like so:
+
+```
+export ROT_AWS_ID=AKI...
+export ROT_AWS_SECRET=WM02nwmG5hDZMgi6WBwCLRQ9CPMV+W/fmc8k7WIf
+export ROT_AWS_REGION=us-west-2
+```
+
+After that, you can run `rotvpn.py`.
+
+### Actually run it
+
+If the two steps above are complete, you're ready to go. Make sure you're running in your virtualenv, and in the root of this repo. Then do something like
 
 ```
 python3 rotvpn.py --name my-cool-vpn
 ```
 
-After the script runs, you should have a file named `peer-tunnel-configs.zip`.
-Unzip and you will have 10 peer configurations.
+After the script runs, you should have a file named `peer-tunnel-configs-<PROVIDER>-<NAME>.zip`. `<PROVIDER>` will be one of the providers above, and `<NAME>` will be whatever you gave rotvpn in the `--name` parameter. Unzip and you will have 10 peer configurations.
 
 
 Here is the usage for the script:
@@ -80,6 +99,12 @@ DigitalOcean provider defaults to the `sfo2` region, and the `s-1vcpu-2gb`
 
 ```
 python3 rotvpn.py --name my-cool-vpn --config '{"region":"nyc3","size":"s-1vcpu-2gb"}'
+```
+
+AWS currently supports chaning the size of your instance. It defaults to `ts.micro`. You can modify this via `--config`, e.g.
+
+```
+python3 rotvpn.py --provider aws --name my-cool-vpn --config '{"size":"t2.medium"}'
 ```
 
 If you're done with the VPN for a while, you can simply remove it, and save

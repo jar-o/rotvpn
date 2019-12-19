@@ -1,6 +1,6 @@
 *.key
-peer-tunnel-configs.zip
-peer-tunnel-configs/
+peer-tunnel-configs*
+*.pem
 .venv3
 .env
 .DS_Store
