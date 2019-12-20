@@ -23,6 +23,10 @@ def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, u
             print('No valid connection. (Server probably not ready.)')
             time.sleep(5)
             continue
+        except TimeoutError:
+            print("Timeout. Hm... let's try again")
+            time.sleep(5)
+            continue
         scp = SCPClient(client.get_transport())
         print('Installing server (running script remotely), takes a little time ...')
         #TODO ensure pathing
@@ -50,11 +54,13 @@ def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, u
             try:
                 scp.get('{}/{}'.format(home, peer_config_download))
             except SCPException:
-                print("{} not avilable. Trying again.".format(peer_config_download))
+                print("{} not avilable. Trying again {}/{}".format(peer_config_download, j, 10))
                 time.sleep(5)
                 continue
-        else:
+            break
+        if os.path.exists(peer_config_download):
             os.rename(peer_config_download, peer_config_download_dest)
             print('Peer configs available: {}'.format(peer_config_download_dest))
-            break
+        else:
+            print('Something went wrong? No {} found.'.format(peer_config_download))
         break
