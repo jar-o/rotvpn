@@ -94,14 +94,14 @@ deleted, and a new server deployed with a new set of client configs
 
 Providers may have additional configuration fields they accept. If they do, you
 can use the `--config` parameter to pass in that information. For instance, the
-DigitalOcean provider defaults to the `sfo2` region, and the `s-1vcpu-2gb`
+DigitalOcean provider defaults to the `sfo2` region, and the `s-1vcpu-1gb`
 (smallest) sized droplet. If you want to change that, you can do something like:
 
 ```
 python3 rotvpn.py --name my-cool-vpn --config '{"region":"nyc3","size":"s-1vcpu-2gb"}'
 ```
 
-AWS currently supports chaning the size of your instance. It defaults to `ts.micro`. You can modify this via `--config`, e.g.
+AWS currently supports changing the size of your instance. It defaults to `ts.micro`. You can modify this via `--config`, e.g.
 
 ```
 python3 rotvpn.py --provider aws --name my-cool-vpn --config '{"size":"t2.medium"}'
