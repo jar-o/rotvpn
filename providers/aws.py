@@ -45,9 +45,11 @@ class AWSProvider:
         self.remove() # rotation
         # create the instance
         size = 't2.micro'
+
         if hasattr(self, 'config') and self.config != None:
             if 'size' in self.config:
                 size = self.config['size']
+        # Details about Ubuntu machine images here: https://cloud-images.ubuntu.com/locator/
         self.instance = create_ec2_instance(self.client, 'ami-0a7d051a1c4b54f65', size, self.key_name)
         self.instance_obj = self.resource.Instance(id=self.instance['InstanceId'])
         self.instance_obj.create_tags(Tags=[
