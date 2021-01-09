@@ -3,7 +3,10 @@
 
 #### Installation
 
-add-apt-repository -y ppa:wireguard/wireguard
+
+echo "nameserver 8.8.8.8" | tee /etc/resolv.conf > /dev/null
+
+add-apt-repository -y universe
 apt install wireguard -y
 apt install zip -y
 apt install unbound unbound-host -y

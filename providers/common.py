@@ -28,7 +28,8 @@ def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, u
             time.sleep(5)
             continue
         scp = SCPClient(client.get_transport())
-        print('Installing server (running script remotely), takes a little time ...')
+        setup_script = './aux/setup-ubuntu.sh'
+        print('Installing server (running script {} remotely), takes a little time ...'.format(setup_script))
         #TODO ensure pathing
         scp.put('./aux/setup-ubuntu.sh', '{}/setup.sh'.format(home))
         if username == 'root':
@@ -43,6 +44,10 @@ def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, u
         exit_status = stdout.channel.recv_exit_status() # Blocking call
         if exit_status != 0:
             print('Error occured. Cannot continue Exit status {}'.format(exit_status))
+            print('{}'.format(stdout))
+            print('{}'.format(stderr))
+            print('You may be able to SSH into the server and troubleshoot:')
+            print('ssh -i {} {}@{}'.format(os.path.abspath(privkey_filename), username, ip_address))
             return
         # now, retrieve the generated peer configs
         try:
@@ -61,6 +66,7 @@ def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, u
         if os.path.exists(peer_config_download):
             os.rename(peer_config_download, peer_config_download_dest)
             print('Peer configs available: {}'.format(peer_config_download_dest))
+            print('SUCCESS!')
         else:
             print('Something went wrong? No {} found.'.format(peer_config_download))
         break
