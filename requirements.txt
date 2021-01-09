@@ -6,7 +6,7 @@ certifi==2019.11.28
 cffi==1.13.2
 chardet==3.0.4
 colorama==0.4.1
-cryptography==2.8
+cryptography==3.2
 docutils==0.15.2
 idna==2.8
 Jinja2==2.10.3
