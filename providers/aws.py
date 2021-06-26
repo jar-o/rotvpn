@@ -75,7 +75,6 @@ class AWSProvider:
             peer_config_download_dest,
             'ubuntu',
             '/home/ubuntu')
-        extract_configs_and_generate_qr_codes(peer_config_download_dest)
     def set_inbound_rules(self):
         response = self.client.describe_instances()
         for reservation in response["Reservations"]:

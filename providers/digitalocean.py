@@ -1,6 +1,6 @@
 # NOTE Providers MUST implement provision() and remove(). That is all.
 import os, time, base64, json
-from providers.common import install_wireguard, generate_qr_code
+from providers.common import install_wireguard
 
 from Crypto.PublicKey import RSA
 import digitalocean
