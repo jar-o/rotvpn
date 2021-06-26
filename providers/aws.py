@@ -68,12 +68,14 @@ class AWSProvider:
                 raise(e)
             print('Inbound firewall rules already exist. Nothing to do.')
         print('Instance is live: {}'.format(self.instance_obj.public_ip_address))
+        peer_config_download_dest = 'peer-tunnel-configs-aws-{}.zip'.format(self.deploy_name)
         install_wireguard(
             self.instance_obj.public_ip_address,
             self.key_fn,
-            'peer-tunnel-configs-aws-{}.zip'.format(self.deploy_name),
+            peer_config_download_dest,
             'ubuntu',
             '/home/ubuntu')
+        extract_configs_and_generate_qr_codes(peer_config_download_dest)
     def set_inbound_rules(self):
         response = self.client.describe_instances()
         for reservation in response["Reservations"]:

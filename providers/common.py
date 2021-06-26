@@ -1,6 +1,11 @@
-import time, os
-from requests import get
 import paramiko
+import qrcode
+import time, os
+import zipfile
+
+from os import listdir
+from os.path import isfile
+from requests import get
 from scp import SCPClient, SCPException
 
 wireguard_port = 51820
@@ -11,6 +16,28 @@ peer_config_download = 'peer-tunnel-configs.zip'
 
 def get_my_ip():
     return get('https://api.ipify.org').text
+
+def unzip_file(zip_path, dest_path):
+    with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+        zip_ref.extractall(dest_path)
+
+def gen_qr_code(input_path, output_path):
+    with open(input_path, 'rb') as f:
+        input_data = f.read()
+    qr = qrcode.QRCode(version=1, box_size=10, border=5)
+    qr.add_data(input_data)
+    qr.make(fit=True)
+    img = qr.make_image(fill='black', back_color='white')
+    img.save(output_path)
+
+def extract_configs_and_generate_qr_codes(zip_path):
+    out_path = zip_path + '.extracted'
+    unzip_file(zip_path, out_path)
+    conf_files = [os.path.join(out_path, f) for f in listdir(out_path) if isfile(os.path.join(out_path, f))]
+    for f in conf_files:
+        of = f + '.png'
+        gen_qr_code(f, of)
+        print(f"QR code generated: {f} -> {of}")
 
 def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, username='root', home='/root'):
     client = paramiko.SSHClient()
@@ -66,6 +93,7 @@ def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, u
         if os.path.exists(peer_config_download):
             os.rename(peer_config_download, peer_config_download_dest)
             print('Peer configs available: {}'.format(peer_config_download_dest))
+            extract_configs_and_generate_qr_codes(peer_config_download_dest)
             print('SUCCESS!')
         else:
             print('Something went wrong? No {} found.'.format(peer_config_download))
