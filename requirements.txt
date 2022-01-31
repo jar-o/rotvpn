@@ -3,7 +3,7 @@ bcrypt==3.1.7
 boto3==1.10.37
 botocore==1.13.50
 certifi==2019.11.28
-cffi==1.13.2
+cffi==1.15.0
 chardet==3.0.4
 colorama==0.4.1
 cryptography==3.3.2
@@ -30,4 +30,4 @@ s3transfer==0.2.1
 scp==0.13.2
 shellescape==3.4.1
 six==1.13.0
-urllib3==1.26.5
+urllib3==1.25.11
