@@ -98,7 +98,7 @@ DigitalOcean provider defaults to the `sfo2` region, and the `s-1vcpu-1gb`
 (smallest) sized droplet. If you want to change that, you can do something like:
 
 ```
-python3 rotvpn.py --name my-cool-vpn --config '{"region":"nyc3","size":"s-1vcpu-2gb"}'
+python3 rotvpn.py --name myvpn --config '{"region":"ams3", "size":"s-1vcpu-2gb-amd"}'
 ```
 
 AWS currently supports changing the size of your instance. It defaults to `ts.micro`. You can modify this via `--config`, e.g.
