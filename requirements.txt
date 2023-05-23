@@ -24,7 +24,7 @@ python-dateutil==2.8.0
 python-digitalocean==1.14.0
 PyYAML==5.4
 qrcode==7.3.1
-requests==2.25.1
+requests==2.31.0
 rsa==4.7
 s3transfer==0.2.1
 scp==0.13.2
