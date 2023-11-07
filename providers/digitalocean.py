@@ -58,16 +58,19 @@ class DigitalOceanProvider:
         # create droplet
         size = 's-1vcpu-1gb'
         region = 'sfo2'
+        image = 'ubuntu-18-04-x64'
         if hasattr(self, 'config') and self.config != None:
             if 'size' in self.config:
                 size = self.config['size']
             if 'region' in self.config:
                 region = self.config['region']
+            if 'image' in self.config:
+                image = self.config['image']
         droplet = digitalocean.Droplet(
             token = os.getenv('ROT_DO_TOKEN'),
             name = self.name,
             region = region,
-            image = 'ubuntu-18-04-x64',
+            image = image,
             size = size,
             ssh_keys = keys,
             backups = False)
