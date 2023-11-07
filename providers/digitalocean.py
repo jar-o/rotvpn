@@ -94,10 +94,14 @@ class DigitalOceanProvider:
         # NOTE there is no API specific way of telling if the SSH daemon is
         # ready. We just have to try in a loop
         time.sleep(10)
+        setup_script = None
+        if image == "debian-12-x64":
+            setup_script = './aux/setup-debian-12.sh'
         install_wireguard(
             self.ip_address,
             self.privkey_fn,
-            'peer-tunnel-configs-digitalocean-{}.zip'.format(self.deploy_name)
+            'peer-tunnel-configs-digitalocean-{}.zip'.format(self.deploy_name),
+            setup_script
         )
     def remove(self):
         has_removed = False
