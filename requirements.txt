@@ -30,4 +30,4 @@ s3transfer==0.2.1
 scp==0.13.2
 shellescape==3.4.1
 six==1.13.0
-urllib3==1.26.17
+urllib3==1.26.18
