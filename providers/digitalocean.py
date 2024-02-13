@@ -58,16 +58,19 @@ class DigitalOceanProvider:
         # create droplet
         size = 's-1vcpu-1gb'
         region = 'sfo2'
+        image = 'ubuntu-18-04-x64'
         if hasattr(self, 'config') and self.config != None:
             if 'size' in self.config:
                 size = self.config['size']
             if 'region' in self.config:
                 region = self.config['region']
+            if 'image' in self.config:
+                image = self.config['image']
         droplet = digitalocean.Droplet(
             token = os.getenv('ROT_DO_TOKEN'),
             name = self.name,
             region = region,
-            image = 'ubuntu-18-04-x64',
+            image = image,
             size = size,
             ssh_keys = keys,
             backups = False)
@@ -91,10 +94,14 @@ class DigitalOceanProvider:
         # NOTE there is no API specific way of telling if the SSH daemon is
         # ready. We just have to try in a loop
         time.sleep(10)
+        setup_script = None
+        if image == "debian-12-x64":
+            setup_script = './aux/setup-debian-12.sh'
         install_wireguard(
             self.ip_address,
             self.privkey_fn,
-            'peer-tunnel-configs-digitalocean-{}.zip'.format(self.deploy_name)
+            'peer-tunnel-configs-digitalocean-{}.zip'.format(self.deploy_name),
+            setup_script
         )
     def remove(self):
         has_removed = False
