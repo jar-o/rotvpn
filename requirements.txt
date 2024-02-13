@@ -14,7 +14,7 @@ jmespath==0.9.4
 jsonpickle==1.2
 MarkupSafe==1.1.1
 Naked==0.1.31
-paramiko==2.10.1
+paramiko==3.4.0
 Pillow==9.3.0
 pyasn1==0.4.8
 pycparser==2.19
