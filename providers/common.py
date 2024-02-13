@@ -39,7 +39,7 @@ def extract_configs_and_generate_qr_codes(zip_path):
         gen_qr_code(f, of)
         print(f"QR code generated: {f} -> {of}")
 
-def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, username='root', home='/root'):
+def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, setup_script=None, username='root', home='/root'):
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     for i in range(5):
@@ -55,10 +55,11 @@ def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, u
             time.sleep(5)
             continue
         scp = SCPClient(client.get_transport())
-        setup_script = './aux/setup-ubuntu.sh'
+        if setup_script == None:
+            setup_script = './aux/setup-ubuntu.sh'
         print('Installing server (running script {} remotely), takes a little time ...'.format(setup_script))
         #TODO ensure pathing
-        scp.put('./aux/setup-ubuntu.sh', '{}/setup.sh'.format(home))
+        scp.put(setup_script, '{}/setup.sh'.format(home))
         if username == 'root':
             stdin, stdout, stderr = client.exec_command('{}/setup.sh'.format(home))
         else: # Assume sudo
