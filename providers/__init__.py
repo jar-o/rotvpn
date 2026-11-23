@@ -5,6 +5,8 @@ import importlib
 _REGISTRY = {
     'digitalocean': ('providers.digitalocean', 'DigitalOceanProvider'),
     'aws': ('providers.aws', 'AWSProvider'),
+    'hetzner': ('providers.hetzner', 'HetznerProvider'),
+    'vultr': ('providers.vultr', 'VultrProvider'),
 }
 
 

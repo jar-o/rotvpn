@@ -14,7 +14,7 @@ and standing up a new one in its place.
 [unbound](https://github.com/NLnetLabs/unbound)). It is designed to be
 ephemeral, so you can rotate to a new server with a single command.
 
-_Currently, [DigitalOcean](https://digitalocean.com) and [AWS](https://aws.amazon.com/) are supported. Got a favorite provider? See [Adding a provider](#adding-a-provider) -- it's one small file. Patches welcome!_
+_Currently, [DigitalOcean](https://digitalocean.com), [AWS](https://aws.amazon.com/), [Hetzner](https://www.hetzner.com/cloud) and [Vultr](https://www.vultr.com/) are supported. Got a favorite provider? See [Adding a provider](#adding-a-provider) -- it's one small file. Patches welcome!_
 
 # Installation
 
@@ -55,6 +55,28 @@ export ROT_AWS_REGION=us-west-2
 ```
 
 After that, you can run `rotvpn.py`.
+
+### Hetzner
+
+Create a project API token with read & write access in the Hetzner Cloud console (Security > API tokens), then:
+
+```
+export ROT_HCLOUD_TOKEN=abc123...
+python3 rotvpn.py --provider hetzner --name my-cool-vpn
+```
+
+`--config` accepts `region` (a Hetzner location, default `nbg1`), `size` (server type) and `image` (default `ubuntu-24.04`). If you don't set `size`, rotvpn picks the cheapest current x86 server type available in that region.
+
+### Vultr
+
+Create an API key at https://my.vultr.com/settings/#settingsapi. Vultr API keys have an access control list, so **allow the IP address you run rotvpn from** (or you'll get 401/403 errors). Then:
+
+```
+export ROT_VULTR_API_KEY=ABC123...
+python3 rotvpn.py --provider vultr --name my-cool-vpn
+```
+
+`--config` accepts `region` (default `sjc`), `size` (plan, default `vc2-1c-1gb`) and `image` (an OS name such as `Ubuntu 24.04 LTS x64`, or a numeric OS id).
 
 ### Actually run it
 

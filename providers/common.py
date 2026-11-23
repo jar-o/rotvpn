@@ -7,6 +7,8 @@ from os import listdir
 from os.path import isfile
 from requests import get
 from scp import SCPClient
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from providers.wireguard import WireGuardConfig, WIREGUARD_PORT
 
@@ -16,6 +18,27 @@ setup_script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..
 
 def get_my_ip():
     return get('https://api.ipify.org').text
+
+def ensure_local_ssh_keypair(privkey_fn, pubkey_fn):
+    """Create an Ed25519 keypair (OpenSSH format) if missing. Returns the public key string."""
+    if os.path.exists(privkey_fn) and os.path.exists(pubkey_fn):
+        print('SSH keys already seem to exist. Skipping generation.')
+        with open(pubkey_fn, 'r') as f:
+            return f.read().strip()
+    key = Ed25519PrivateKey.generate()
+    priv = key.private_bytes(
+        serialization.Encoding.PEM,
+        serialization.PrivateFormat.OpenSSH,
+        serialization.NoEncryption())
+    pub = key.public_key().public_bytes(
+        serialization.Encoding.OpenSSH,
+        serialization.PublicFormat.OpenSSH).decode()
+    fd = os.open(privkey_fn, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, 'wb') as f:
+        f.write(priv)
+    with open(pubkey_fn, 'w') as f:
+        f.write(pub)
+    return pub
 
 def unzip_file(zip_path, dest_path):
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:

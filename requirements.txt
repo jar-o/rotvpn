@@ -1,5 +1,6 @@
 boto3==1.44.10
 cryptography==50.0.2
+hcloud==2.27.0
 paramiko==5.1.0
 Pillow==13.0.0
 pycryptodome==4.6.0
