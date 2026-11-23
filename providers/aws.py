@@ -124,16 +124,21 @@ class AWSProvider(Provider):
                             )
 
     def remove(self):
-        reservations = self.client.describe_instances(
-            Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])["Reservations"]
+        # Match by Name tag server-side, and include every live state so a
+        # pending/stopped instance isn't orphaned (and keeps costing money).
+        reservations = self.client.describe_instances(Filters=[
+            {'Name': 'tag:Name', 'Values': [self.resource_name]},
+            {'Name': 'instance-state-name',
+             'Values': ['pending', 'running', 'stopping', 'stopped']},
+        ])["Reservations"]
+        found = False
         for res in reservations:
             for inst in res['Instances']:
-                for tag in inst['Tags']:
-                    instid = inst['InstanceId']
-                    if tag['Key'] == 'Name' and tag['Value'] == self.resource_name:
-                        print('Instance {} found with ID {}. Terminating ...'.format(self.resource_name, instid))
-                        self.resource.instances.filter(InstanceIds = [instid]).terminate()
-                        print('Done.')
+                instid = inst['InstanceId']
+                print('Instance {} found with ID {}. Terminating ...'.format(self.resource_name, instid))
+                self.resource.instances.filter(InstanceIds=[instid]).terminate()
+                found = True
+        print('Done.' if found else 'Deploy {} not found.'.format(self.resource_name))
 
 
 # Stole from AWS docs
