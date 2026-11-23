@@ -1,10 +1,21 @@
-import os, time, base64, json
+import os
 import boto3
-from providers.common import get_my_ip, wireguard_port, provision_wireguard
 
-class AWSProvider:
+from providers.base import Provider
+from providers.common import get_my_ip, wireguard_port
+
+
+class AWSProvider(Provider):
+    name = 'aws'
+    ssh_user = 'ubuntu'
+    defaults = {
+        'size': 't3.micro',
+        'ami': None,  # None = look up the newest Ubuntu 24.04 LTS AMI in the region
+    }
+
     def __init__(self, deploy_name, config=None):
-        self.deploy_name = 'rotvpn-{}'.format(deploy_name)
+        super().__init__(deploy_name, config)
+        self.resource_name = 'rotvpn-{}'.format(deploy_name)  # EC2 Name tag
         self.aws_id = os.getenv('ROT_AWS_ID')
         if self.aws_id == None:
             raise Exception("Must set ROT_AWS_* env vars! See https://github.com/jar-o/rotvpn")
@@ -14,19 +25,18 @@ class AWSProvider:
             aws_access_key_id=self.aws_id,
             aws_secret_access_key=self.aws_secret,
             region_name=self.aws_region)
-        self.resource =  boto3.session.Session(
+        self.resource = boto3.session.Session(
             aws_access_key_id=self.aws_id,
             aws_secret_access_key=self.aws_secret,
-            aws_session_token=None,
+            region_name=self.aws_region,
         ).resource('ec2')
         self.key_name = 'rotvpn-aws-ecs-keypair-' + deploy_name
         self.key_fn = self.key_name + '.pem'
-        if config != None:
-            self.config = json.loads(config)
-    def gen_ssh_keys(self):
+
+    def ensure_ssh_key(self):
         if os.path.exists(self.key_fn):
             print('SSH key already seems to exist ({}). Skipping generation.'.format(self.key_fn))
-            return
+            return self.key_fn
         keypair = None
         try:
             keypair = self.client.create_key_pair(KeyName=self.key_name)
@@ -40,28 +50,18 @@ class AWSProvider:
         with open(self.key_fn, 'w') as outfile:
             outfile.write(str(keypair['KeyMaterial']))
         os.chmod(self.key_fn, 0o600)
-    def provision(self):
-        self.gen_ssh_keys()
-        self.remove() # rotation
-        # create the instance
-        size = 't3.micro'
-        ami = None
+        return self.key_fn
 
-        if hasattr(self, 'config') and self.config != None:
-            if 'size' in self.config:
-                size = self.config['size']
-            if 'ami' in self.config:
-                ami = self.config['ami']
-        if ami is None:
-            ami = self.latest_ubuntu_ami()
-        self.instance = create_ec2_instance(self.client, ami, size, self.key_name)
+    def create_server(self):
+        ami = self.config['ami'] or self.latest_ubuntu_ami()
+        self.instance = create_ec2_instance(self.client, ami, self.config['size'], self.key_name)
         if self.instance is None:
             raise Exception('Could not launch instance (see error above).')
         self.instance_obj = self.resource.Instance(id=self.instance['InstanceId'])
         self.instance_obj.create_tags(Tags=[
             {
                 'Key': 'Name',
-                'Value': self.deploy_name,
+                'Value': self.resource_name,
             }
         ])
         print('Waiting for instance...')
@@ -73,13 +73,8 @@ class AWSProvider:
             if 'invalidpermission.duplicate' not in str(e).lower():
                 raise(e)
             print('Inbound firewall rules already exist. Nothing to do.')
-        print('Instance is live: {}'.format(self.instance_obj.public_ip_address))
-        peer_config_download_dest = 'peer-tunnel-configs-aws-{}.zip'.format(self.deploy_name)
-        provision_wireguard(
-            self.instance_obj.public_ip_address,
-            self.key_fn,
-            peer_config_download_dest,
-            username='ubuntu')
+        return self.instance_obj.public_ip_address
+
     def latest_ubuntu_ami(self):
         # AMI IDs are per-region, so look up Canonical's newest Ubuntu LTS image.
         images = self.client.describe_images(
@@ -93,6 +88,7 @@ class AWSProvider:
         newest = max(images, key=lambda i: i['CreationDate'])
         print('Using {} ({})'.format(newest['ImageId'], newest['Name']))
         return newest['ImageId']
+
     def set_inbound_rules(self):
         response = self.client.describe_instances()
         for reservation in response["Reservations"]:
@@ -126,6 +122,7 @@ class AWSProvider:
                                     ]
                                 }],
                             )
+
     def remove(self):
         reservations = self.client.describe_instances(
             Filters=[{'Name': 'instance-state-name', 'Values': ['running']}])["Reservations"]
@@ -133,8 +130,8 @@ class AWSProvider:
             for inst in res['Instances']:
                 for tag in inst['Tags']:
                     instid = inst['InstanceId']
-                    if tag['Key'] == 'Name' and tag['Value'] == self.deploy_name:
-                        print('Instance {} found with ID {}. Terminating ...'.format(self.deploy_name, instid))
+                    if tag['Key'] == 'Name' and tag['Value'] == self.resource_name:
+                        print('Instance {} found with ID {}. Terminating ...'.format(self.resource_name, instid))
                         self.resource.instances.filter(InstanceIds = [instid]).terminate()
                         print('Done.')
 
@@ -147,14 +144,11 @@ def create_ec2_instance(ec2_client, image_id, instance_type, keypair_name):
     a running state.
 
     :param image_id: ID of AMI to launch, such as 'ami-XXXX'
-    :param instance_type: string, such as 't2.micro'
+    :param instance_type: string, such as 't3.micro'
     :param keypair_name: string, name of the key pair
     :return Dictionary containing information about the instance. If error,
     returns None.
     """
-
-    # Provision and launch the EC2 instance
-    # ec2_client = boto3.client('ec2')
     try:
         response = ec2_client.run_instances(ImageId=image_id,
                                             InstanceType=instance_type,

@@ -14,7 +14,7 @@ and standing up a new one in its place.
 [unbound](https://github.com/NLnetLabs/unbound)). It is designed to be
 ephemeral, so you can rotate to a new server with a single command.
 
-_Currently, only [DigitalOcean](https://digitalocean.com) and [AWS](https://aws.amazon.com/) are supported. Other providers may be added in the future... Got a favorite? Feel free to send a patch!_
+_Currently, [DigitalOcean](https://digitalocean.com) and [AWS](https://aws.amazon.com/) are supported. Got a favorite provider? See [Adding a provider](#adding-a-provider) -- it's one small file. Patches welcome!_
 
 # Installation
 
@@ -115,6 +115,22 @@ some money until you need it again:
 ```
 python3 rotvpn.py --name my-cool-vpn --do remove
 ```
+
+# Adding a provider
+
+A provider is a subclass of `Provider` in `providers/base.py`. Create
+`providers/yourcloud.py`, set `name` (plus `ssh_user` and `defaults` if needed)
+and implement three methods:
+
+- `ensure_ssh_key()` -- make sure a local SSH keypair exists and is registered
+  with the provider; return the private key path.
+- `create_server()` -- create the VM, wait for a public IP, return it.
+- `remove()` -- delete the VM for this deploy name, if any.
+
+Then add one line to the registry in `providers/__init__.py`. The shared flow
+(rotate the old server, install WireGuard, write client configs and QR codes)
+lives in `Provider.provision()`, and `--config` JSON is merged over your
+`defaults`. `providers/digitalocean.py` is the simplest example.
 
 # Client configuration
 
