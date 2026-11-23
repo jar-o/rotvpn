@@ -1,6 +1,6 @@
 # NOTE Providers MUST implement provision() and remove(). That is all.
 import os, time, base64, json
-from providers.common import install_wireguard
+from providers.common import provision_wireguard
 
 from Crypto.PublicKey import RSA
 import digitalocean
@@ -58,7 +58,7 @@ class DigitalOceanProvider:
         # create droplet
         size = 's-1vcpu-1gb'
         region = 'sfo2'
-        image = 'ubuntu-18-04-x64'
+        image = 'ubuntu-24-04-x64'
         if hasattr(self, 'config') and self.config != None:
             if 'size' in self.config:
                 size = self.config['size']
@@ -94,14 +94,10 @@ class DigitalOceanProvider:
         # NOTE there is no API specific way of telling if the SSH daemon is
         # ready. We just have to try in a loop
         time.sleep(10)
-        setup_script = None
-        if image == "debian-12-x64":
-            setup_script = './aux/setup-debian-12.sh'
-        install_wireguard(
+        provision_wireguard(
             self.ip_address,
             self.privkey_fn,
-            'peer-tunnel-configs-digitalocean-{}.zip'.format(self.deploy_name),
-            setup_script
+            'peer-tunnel-configs-digitalocean-{}.zip'.format(self.deploy_name)
         )
     def remove(self):
         has_removed = False

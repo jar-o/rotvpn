@@ -64,7 +64,7 @@ If the two steps above are complete, you're ready to go. Make sure you're runnin
 python3 rotvpn.py --name my-cool-vpn
 ```
 
-After the script runs, you should have a file named `peer-tunnel-configs-<PROVIDER>-<NAME>.zip`. `<PROVIDER>` will be one of the providers above, and `<NAME>` will be whatever you gave rotvpn in the `--name` parameter. Unzip and you will have 10 peer configurations.
+After the script runs, you should have a file named `peer-tunnel-configs-<PROVIDER>-<NAME>.zip`. `<PROVIDER>` will be one of the providers above, and `<NAME>` will be whatever you gave rotvpn in the `--name` parameter. Unzip and you will have 10 peer configurations. All WireGuard keys are generated on your machine; the server only receives its own private key and the peers' public keys.
 
 
 Here is the usage for the script:
@@ -95,17 +95,18 @@ deleted, and a new server deployed with a new set of client configs
 Providers may have additional configuration fields they accept. If they do, you
 can use the `--config` parameter to pass in that information. For instance, the
 DigitalOcean provider defaults to the `sfo2` region, the `s-1vcpu-1gb`
-(smallest) sized droplet and uses Ubuntu 18.04 LTS. If you want to change that,
-you can do something like:
+(smallest) sized droplet and uses Ubuntu 24.04 LTS. The setup script is
+distro-agnostic for current Debian/Ubuntu, so other apt-based images work too. If
+you want to change that, you can do something like:
 
 ```
 python3 rotvpn.py --name myvpn --config '{"region":"ams3", "size":"s-1vcpu-2gb-amd", "image":"debian-12-x64"}'
 ```
 
-AWS currently supports changing the size of your instance. It defaults to `ts.micro`. You can modify this via `--config`, e.g.
+AWS lets you change the size of your instance (default `t3.micro`) and, optionally, the AMI. By default it looks up the newest Ubuntu 24.04 LTS AMI in your region. You can modify these via `--config`, e.g.
 
 ```
-python3 rotvpn.py --provider aws --name my-cool-vpn --config '{"size":"t2.medium"}'
+python3 rotvpn.py --provider aws --name my-cool-vpn --config '{"size":"t3.small"}'
 ```
 
 If you're done with the VPN for a while, you can simply remove it, and save

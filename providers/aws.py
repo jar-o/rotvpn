@@ -1,6 +1,6 @@
 import os, time, base64, json
 import boto3
-from providers.common import get_my_ip, wireguard_port, install_wireguard
+from providers.common import get_my_ip, wireguard_port, provision_wireguard
 
 class AWSProvider:
     def __init__(self, deploy_name, config=None):
@@ -44,13 +44,19 @@ class AWSProvider:
         self.gen_ssh_keys()
         self.remove() # rotation
         # create the instance
-        size = 't2.micro'
+        size = 't3.micro'
+        ami = None
 
         if hasattr(self, 'config') and self.config != None:
             if 'size' in self.config:
                 size = self.config['size']
-        # Details about Ubuntu machine images here: https://cloud-images.ubuntu.com/locator/
-        self.instance = create_ec2_instance(self.client, 'ami-0a7d051a1c4b54f65', size, self.key_name)
+            if 'ami' in self.config:
+                ami = self.config['ami']
+        if ami is None:
+            ami = self.latest_ubuntu_ami()
+        self.instance = create_ec2_instance(self.client, ami, size, self.key_name)
+        if self.instance is None:
+            raise Exception('Could not launch instance (see error above).')
         self.instance_obj = self.resource.Instance(id=self.instance['InstanceId'])
         self.instance_obj.create_tags(Tags=[
             {
@@ -69,12 +75,24 @@ class AWSProvider:
             print('Inbound firewall rules already exist. Nothing to do.')
         print('Instance is live: {}'.format(self.instance_obj.public_ip_address))
         peer_config_download_dest = 'peer-tunnel-configs-aws-{}.zip'.format(self.deploy_name)
-        install_wireguard(
+        provision_wireguard(
             self.instance_obj.public_ip_address,
             self.key_fn,
             peer_config_download_dest,
-            'ubuntu',
-            '/home/ubuntu')
+            username='ubuntu')
+    def latest_ubuntu_ami(self):
+        # AMI IDs are per-region, so look up Canonical's newest Ubuntu LTS image.
+        images = self.client.describe_images(
+            Owners=['099720109477'],  # Canonical
+            Filters=[
+                {'Name': 'name', 'Values': ['ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*']},
+                {'Name': 'state', 'Values': ['available']},
+            ])['Images']
+        if not images:
+            raise Exception('No Ubuntu 24.04 AMI found in {}. Pass one via --config \'{{"ami":"ami-..."}}\''.format(self.aws_region))
+        newest = max(images, key=lambda i: i['CreationDate'])
+        print('Using {} ({})'.format(newest['ImageId'], newest['Name']))
+        return newest['ImageId']
     def set_inbound_rules(self):
         response = self.client.describe_instances()
         for reservation in response["Reservations"]:

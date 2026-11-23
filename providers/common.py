@@ -1,18 +1,18 @@
 import paramiko
 import qrcode
-import time, os
+import io, time, os
 import zipfile
 
 from os import listdir
 from os.path import isfile
 from requests import get
-from scp import SCPClient, SCPException
+from scp import SCPClient
 
-wireguard_port = 51820
+from providers.wireguard import WireGuardConfig, WIREGUARD_PORT
 
-# TODO it's sort of bothersome that this requires a matching edit in
-# setup-ubuntu.sh. Should templatize and drive from Python side.
-peer_config_download = 'peer-tunnel-configs.zip'
+wireguard_port = WIREGUARD_PORT
+
+setup_script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'aux', 'setup.sh')
 
 def get_my_ip():
     return get('https://api.ipify.org').text
@@ -39,63 +39,56 @@ def extract_configs_and_generate_qr_codes(zip_path):
         gen_qr_code(f, of)
         print(f"QR code generated: {f} -> {of}")
 
-def install_wireguard(ip_address, privkey_filename, peer_config_download_dest, setup_script=None, username='root', home='/root'):
+def install_wireguard(ip_address, privkey_filename, server_config, username='root'):
+    """Upload setup.sh and the server's wg0.conf, run the setup. Returns True on success."""
+    privkey_filename = os.path.abspath(privkey_filename)
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    for i in range(5):
-        print("Attempting to connect {}/{} ...".format(i, 5))
+    max_tries = 12
+    for i in range(1, max_tries + 1):
+        print("Attempting to connect {}/{} ...".format(i, max_tries))
         try:
-            client.connect(ip_address, username=username, key_filename=os.path.abspath(privkey_filename))
-        except paramiko.ssh_exception.NoValidConnectionsError:
-            print('No valid connection. (Server probably not ready.)')
-            time.sleep(5)
-            continue
-        except TimeoutError:
-            print("Timeout. Hm... let's try again")
-            time.sleep(5)
-            continue
-        scp = SCPClient(client.get_transport())
-        if setup_script == None:
-            setup_script = './aux/setup-ubuntu.sh'
-        print('Installing server (running script {} remotely), takes a little time ...'.format(setup_script))
-        #TODO ensure pathing
-        scp.put(setup_script, '{}/setup.sh'.format(home))
-        if username == 'root':
-            stdin, stdout, stderr = client.exec_command('{}/setup.sh'.format(home))
-        else: # Assume sudo
-            cmd1 = '{}/setup.sh'.format(home)
-            cmd2 = 'chmod a+rw {}'.format(peer_config_download)
-            cmd3 = 'mv {} {}'.format(peer_config_download, home)
-            cmd =  "sudo su - root -c 'sleep 15 && {} && {} && {}'".format(cmd1, cmd2, cmd3)
-            print('Running {}'.format(cmd))
-            stdin, stdout, stderr = client.exec_command(cmd)
-        exit_status = stdout.channel.recv_exit_status() # Blocking call
-        if exit_status != 0:
-            print('Error occured. Cannot continue Exit status {}'.format(exit_status))
-            print('{}'.format(stdout))
-            print('{}'.format(stderr))
-            print('You may be able to SSH into the server and troubleshoot:')
-            print('ssh -i {} {}@{}'.format(os.path.abspath(privkey_filename), username, ip_address))
-            return
-        # now, retrieve the generated peer configs
-        try:
-            os.remove(peer_config_download)
-            os.remove(peer_config_download_dest)
-        except FileNotFoundError:
-            pass
-        for j in range(10):
-            try:
-                scp.get('{}/{}'.format(home, peer_config_download))
-            except SCPException:
-                print("{} not avilable. Trying again {}/{}".format(peer_config_download, j, 10))
-                time.sleep(5)
-                continue
+            client.connect(ip_address, username=username, key_filename=privkey_filename, timeout=15)
             break
-        if os.path.exists(peer_config_download):
-            os.rename(peer_config_download, peer_config_download_dest)
-            print('Peer configs available: {}'.format(peer_config_download_dest))
-            extract_configs_and_generate_qr_codes(peer_config_download_dest)
-            print('SUCCESS!')
-        else:
-            print('Something went wrong? No {} found.'.format(peer_config_download))
-        break
+        except (paramiko.ssh_exception.NoValidConnectionsError,
+                paramiko.ssh_exception.SSHException,
+                TimeoutError, OSError) as e:
+            print('Not ready yet ({}). Retrying ...'.format(type(e).__name__))
+            time.sleep(5)
+    else:
+        print('Could not connect to {} over SSH.'.format(ip_address))
+        return False
+
+    # Non-root users (e.g. ubuntu on AWS) land in their home dir; use relative paths.
+    sudo = '' if username == 'root' else 'sudo '
+    scp = SCPClient(client.get_transport())
+    scp.put(setup_script_path, 'rotvpn-setup.sh')
+    with io.BytesIO(server_config.encode()) as fl:
+        scp.putfo(fl, 'rotvpn-wg0.conf', mode='0600')
+    print('Installing server (running setup.sh remotely), takes a little time ...')
+    stdin, stdout, stderr = client.exec_command(
+        '{0}bash rotvpn-setup.sh rotvpn-wg0.conf; rc=$?; rm -f rotvpn-setup.sh; exit $rc'.format(sudo))
+    out = stdout.read().decode(errors='replace')
+    err = stderr.read().decode(errors='replace')
+    exit_status = stdout.channel.recv_exit_status()
+    client.close()
+    if exit_status != 0:
+        print('Error occurred. Cannot continue. Exit status {}'.format(exit_status))
+        print(out)
+        print(err)
+        print('You may be able to SSH into the server and troubleshoot:')
+        print('ssh -i {} {}@{}'.format(privkey_filename, username, ip_address))
+        return False
+    return True
+
+
+def provision_wireguard(ip_address, privkey_filename, peer_config_dest, username='root'):
+    """Generate keys locally, set up the server, write client configs + QR codes."""
+    wg = WireGuardConfig()
+    if not install_wireguard(ip_address, privkey_filename, wg.server_config(), username):
+        return False
+    wg.write_zip(ip_address, peer_config_dest)
+    print('Peer configs available: {}'.format(peer_config_dest))
+    extract_configs_and_generate_qr_codes(peer_config_dest)
+    print('SUCCESS!')
+    return True
